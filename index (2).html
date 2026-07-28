@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<!-- ══════════════════════════════════════════════════════════════
+     EDITA SOLO ESTO Y LA WEB ES TUYA
+     1. El <title> y la <meta name="description"> de aquí abajo
+     2. Las meta og: (lo que se ve al compartir el enlace)
+     3. La sección CONTACTO, al final del <body> — busca "EDITAR:"
+     4. Los textos de las NOTAS — busca "EDITAR:"
+     Lo demás no hace falta tocarlo.
+     ══════════════════════════════════════════════════════════════ -->
+
+<title>Durik — Ajuste de Windows, latencia y rendimiento</title>
+<meta name="description" content="Ajuste de Windows medido: registro, servicios, latencia de entrada y rendimiento real en juego. Sin recetas de foro.">
+
+<meta property="og:title" content="Durik — Ajuste de Windows, latencia y rendimiento">
+<meta property="og:description" content="Ajuste de Windows medido. Si no se ve en los datos, se cae.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#04070F">
+
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 96'><path d='M40 0 L8 52 L28 52 L24 96 L56 40 L36 40 Z' fill='%232AE8FF'/></svg>">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --void:#04070F;
+  --deep:#0A1526;
+  --rule:#152741;
+  --gris:#8095B0;
+  --soft:#B6C6DC;
+  --white:#EAF4FF;
+  --cyan:#2AE8FF;
+  --blue:#3B7BFF;
+
+  --glow:0 0 14px rgba(42,232,255,.45);
+  --display:'Archivo','Helvetica Neue',Arial,sans-serif;
+  --body:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono','Consolas',ui-monospace,monospace;
+  --gut:clamp(20px,5vw,64px);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--void);color:var(--soft);
+  font-family:var(--body);font-size:16px;line-height:1.6;
+  -webkit-font-smoothing:antialiased;overflow-x:hidden;
+}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 var(--gut);position:relative}
+
+.eyebrow{
+  font-family:var(--mono);font-size:11px;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--gris);
+}
+
+/* reveal al hacer scroll */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease}
+.rv.in{opacity:1;transform:none}
+
+/* ── marca de rayo ── */
+.bolt{display:block}
+.bolt path{fill:url(#boltGrad)}
+
+/* ── barra ── */
+.nav{
+  border-bottom:1px solid var(--rule);position:sticky;top:0;z-index:30;
+  background:rgba(4,7,15,.86);backdrop-filter:blur(12px);
+}
+.nav-in{display:flex;align-items:center;justify-content:space-between;height:58px}
+.mark{display:flex;align-items:center;gap:10px}
+.mark .bolt{width:15px;height:22px;filter:drop-shadow(0 0 7px rgba(42,232,255,.75))}
+.mark-t{
+  font-family:var(--display);font-variation-settings:'wdth' 118,'wght' 800;
+  font-size:15px;letter-spacing:.16em;color:var(--white);
+}
+.nav-links{display:flex;gap:24px}
+.nav-links a{
+  font-family:var(--mono);font-size:12px;letter-spacing:.1em;
+  color:var(--gris);transition:color .18s,text-shadow .18s;
+}
+.nav-links a:hover{color:var(--cyan);text-shadow:var(--glow)}
+
+/* ── ambiente eléctrico ── */
+.field{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.field::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(700px 460px at 78% -8%,rgba(59,123,255,.20),transparent 68%),
+    radial-gradient(560px 380px at 8% 8%,rgba(42,232,255,.10),transparent 70%);
+}
+.field::after{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(var(--rule) 1px,transparent 1px),linear-gradient(90deg,var(--rule) 1px,transparent 1px);
+  background-size:78px 78px;opacity:.30;
+  mask-image:radial-gradient(circle at 50% 22%,#000 0%,transparent 74%);
+  -webkit-mask-image:radial-gradient(circle at 50% 22%,#000 0%,transparent 74%);
+}
+#strikes{position:absolute;inset:0;width:100%;height:100%}
+#strikes polyline{
+  fill:none;stroke:var(--cyan);stroke-width:1.4;
+  stroke-linecap:round;stroke-linejoin:round;
+  filter:drop-shadow(0 0 8px rgba(42,232,255,.9));opacity:0;
+}
+body>*:not(.field){position:relative;z-index:1}
+
+/* ── portada ── */
+.hero{padding:clamp(52px,10vh,100px) 0 clamp(40px,7vh,72px)}
+.hero-top{display:flex;align-items:flex-start;gap:clamp(16px,4vw,54px)}
+.hero-bolt{
+  flex:0 0 auto;width:clamp(52px,10vw,116px);height:auto;margin-top:6px;
+  animation:hum 3.6s ease-in-out infinite;
+}
+@keyframes hum{
+  0%,100%{filter:drop-shadow(0 0 18px rgba(42,232,255,.42))}
+  50%{filter:drop-shadow(0 0 34px rgba(42,232,255,.78))}
+}
+.hero h1{
+  font-family:var(--display);font-variation-settings:'wdth' 125,'wght' 850;
+  font-size:clamp(52px,13.5vw,158px);line-height:.82;letter-spacing:-.02em;
+  text-transform:uppercase;color:var(--white);
+  text-shadow:0 0 42px rgba(59,123,255,.42);
+}
+.lede{max-width:47ch;margin-top:26px;font-size:clamp(16px,1.6vw,19px)}
+.lede em{color:var(--cyan);font-style:normal;text-shadow:var(--glow)}
+
+/* ── osciloscopio ── */
+.scope{
+  margin-top:clamp(34px,6vh,58px);border:1px solid var(--rule);
+  background:linear-gradient(180deg,var(--deep),rgba(10,21,38,.55));
+  box-shadow:0 0 60px rgba(59,123,255,.10);
+}
+.scope-head{
+  display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid var(--rule);
+}
+.toggle{display:flex;border:1px solid var(--rule)}
+.toggle button{
+  font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+  background:none;border:0;color:var(--gris);padding:7px 15px;cursor:pointer;transition:.18s;
+}
+.toggle button+button{border-left:1px solid var(--rule)}
+.toggle button[aria-pressed="true"]{background:var(--cyan);color:#02121A;box-shadow:0 0 18px rgba(42,232,255,.55)}
+canvas{display:block;width:100%;height:230px}
+.readouts{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--rule)}
+.ro{padding:14px 16px}
+.ro+.ro{border-left:1px solid var(--rule)}
+.ro-k{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--gris);text-transform:uppercase}
+.ro-v{
+  font-family:var(--display);font-variation-settings:'wdth' 105,'wght' 700;
+  font-size:26px;margin-top:2px;color:var(--white);font-variant-numeric:tabular-nums;
+}
+.ro-v u{text-decoration:none;font-size:13px;color:var(--gris);margin-left:3px}
+.scope-note{
+  padding:10px 16px;border-top:1px solid var(--rule);
+  font-family:var(--mono);font-size:10.5px;color:var(--gris);letter-spacing:.05em;
+}
+
+/* ── secciones ── */
+section{border-top:1px solid var(--rule);padding:clamp(48px,8vh,86px) 0}
+.sec-h{
+  font-family:var(--display);font-variation-settings:'wdth' 120,'wght' 800;
+  font-size:clamp(28px,4.5vw,48px);text-transform:uppercase;
+  line-height:1;margin-top:12px;color:var(--white);
+}
+
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--rule);margin-top:44px;border:1px solid var(--rule)}
+.cell{background:var(--void);padding:28px 24px;transition:background .25s}
+.cell:hover{background:var(--deep)}
+.cell h3{
+  font-family:var(--display);font-variation-settings:'wdth' 108,'wght' 700;
+  font-size:19px;text-transform:uppercase;color:var(--white);
+}
+.cell p{margin-top:12px;font-size:15px;color:var(--gris)}
+.cell .eyebrow{display:block;margin-bottom:14px;color:var(--cyan)}
+
+/* ── proceso (secuencia real, por eso va numerado) ── */
+.steps{margin-top:44px;border-top:1px solid var(--rule)}
+.step{
+  display:grid;grid-template-columns:78px 1fr;gap:clamp(14px,3vw,40px);
+  padding:26px 0;border-bottom:1px solid var(--rule);align-items:baseline;
+}
+.step-n{
+  font-family:var(--display);font-variation-settings:'wdth' 118,'wght' 800;
+  font-size:30px;color:var(--cyan);text-shadow:var(--glow);
+}
+.step h3{
+  font-family:var(--display);font-variation-settings:'wdth' 108,'wght' 700;
+  font-size:20px;text-transform:uppercase;color:var(--white);
+}
+.step p{margin-top:8px;color:var(--gris);max-width:62ch}
+
+/* ── proyecto ── */
+.proj{display:grid;grid-template-columns:1fr 1fr;gap:clamp(28px,5vw,64px);align-items:start;margin-top:40px}
+.proj h2{
+  font-family:var(--display);font-variation-settings:'wdth' 125,'wght' 900;
+  font-size:clamp(44px,8vw,88px);line-height:.9;text-transform:uppercase;
+  background:linear-gradient(100deg,var(--cyan),var(--blue));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.proj p{margin-top:18px;color:var(--gris);max-width:40ch}
+.specs{border:1px solid var(--rule);background:rgba(10,21,38,.5)}
+.spec{display:flex;justify-content:space-between;gap:16px;padding:13px 16px;font-family:var(--mono);font-size:12.5px}
+.spec+.spec{border-top:1px solid var(--rule)}
+.spec b{font-weight:500;color:var(--gris)}
+.spec span{color:var(--white);text-align:right}
+
+/* ── notas ── */
+.notes{margin-top:44px;border-top:1px solid var(--rule)}
+.note{
+  display:grid;grid-template-columns:104px 1fr;gap:clamp(14px,3vw,32px);
+  padding:22px 0;border-bottom:1px solid var(--rule);align-items:baseline;
+  transition:padding-left .22s;
+}
+.note:hover{padding-left:10px}
+.note:hover .note-t{color:var(--cyan);text-shadow:var(--glow)}
+.note-d{font-family:var(--mono);font-size:11.5px;color:var(--gris);letter-spacing:.05em}
+.note-t{font-size:17px;color:var(--white);transition:color .22s,text-shadow .22s}
+.note-s{margin-top:5px;font-size:14.5px;color:var(--gris)}
+
+/* ── contacto ── */
+.contact-links{display:flex;flex-wrap:wrap;gap:10px;margin-top:32px}
+.contact-links a{
+  font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;
+  border:1px solid var(--rule);padding:11px 20px;transition:.2s;
+}
+.contact-links a:hover{border-color:var(--cyan);color:var(--cyan);box-shadow:0 0 20px rgba(42,232,255,.25)}
+
+footer{border-top:1px solid var(--rule);padding:26px 0}
+.foot-in{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--gris)}
+
+@media(max-width:820px){
+  .grid3,.proj{grid-template-columns:1fr}
+  .readouts{grid-template-columns:1fr}
+  .ro+.ro{border-left:0;border-top:1px solid var(--rule)}
+  .step,.note{grid-template-columns:1fr;gap:6px}
+  .nav-links{gap:16px}
+}
+@media(max-width:520px){
+  .hero-top{gap:14px}
+  .nav-links a:not(.keep){display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .rv{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="boltGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8BF6FF"/>
+      <stop offset="45%" stop-color="#2AE8FF"/>
+      <stop offset="100%" stop-color="#3B7BFF"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div class="field" aria-hidden="true"><svg id="strikes" preserveAspectRatio="none"></svg></div>
+
+<nav class="nav">
+  <div class="wrap nav-in">
+    <a class="mark" href="#top" aria-label="Inicio">
+      <svg class="bolt" viewBox="0 0 64 96" aria-hidden="true"><path d="M40 0 L8 52 L28 52 L24 96 L56 40 L36 40 Z"/></svg>
+      <span class="mark-t">DURIK</span>
+    </a>
+    <div class="nav-links">
+      <a href="#trabajo">trabajo</a>
+      <a href="#proceso">proceso</a>
+      <a href="#rayo">rayo</a>
+      <a href="#notas">notas</a>
+      <a href="#contacto" class="keep">contacto</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero wrap" id="top">
+  <div class="eyebrow">Mérida, ES &nbsp;·&nbsp; Windows &nbsp;·&nbsp; Latencia &nbsp;·&nbsp; Rendimiento</div>
+  <div class="hero-top">
+    <svg class="bolt hero-bolt" viewBox="0 0 64 96" aria-hidden="true"><path d="M40 0 L8 52 L28 52 L24 96 L56 40 L36 40 Z"/></svg>
+    <h1>Durik</h1>
+  </div>
+  <p class="lede">Llevo años desmontando Windows para que rinda de verdad. No toco un ajuste que no pueda justificar con una medición — <em>si no se ve en los datos, se cae.</em></p>
+
+  <div class="scope">
+    <div class="scope-head">
+      <div class="eyebrow">Tiempo de frame · ms</div>
+      <div class="toggle" role="group" aria-label="Estado del sistema">
+        <button id="b-raw" aria-pressed="true">Sin tocar</button>
+        <button id="b-opt" aria-pressed="false">Optimizado</button>
+      </div>
+    </div>
+    <canvas id="scope" aria-label="Gráfico animado de tiempo de frame que se estabiliza al activar el modo optimizado"></canvas>
+    <div class="readouts">
+      <div class="ro"><div class="ro-k">1% low</div><div class="ro-v"><span id="r-low">—</span><u>fps</u></div></div>
+      <div class="ro"><div class="ro-k">Pico máximo</div><div class="ro-v"><span id="r-max">—</span><u>ms</u></div></div>
+      <div class="ro"><div class="ro-k">Variación</div><div class="ro-v"><span id="r-var">—</span><u>ms</u></div></div>
+    </div>
+    <div class="scope-note">Demostración interactiva — pulsa los botones para alternar el estado.</div>
+  </div>
+</header>
+
+<section id="trabajo" class="wrap">
+  <div class="rv">
+    <div class="eyebrow">01 — Qué hago</div>
+    <h2 class="sec-h">Menos ruido,<br>más control</h2>
+  </div>
+  <div class="grid3 rv">
+    <div class="cell">
+      <span class="eyebrow">Sistema</span>
+      <h3>Ajuste fino</h3>
+      <p>Registro, servicios, planificador de CPU, gestión de interrupciones y energía. Todo documentado y con marcha atrás.</p>
+    </div>
+    <div class="cell">
+      <span class="eyebrow">Entrada</span>
+      <h3>Latencia real</h3>
+      <p>Del ratón al píxel. Tasa de sondeo, DPI, sensibilidad y cadena de render, tratados como una sola ruta.</p>
+    </div>
+    <div class="cell">
+      <span class="eyebrow">Método</span>
+      <h3>Medición</h3>
+      <p>Nada entra sin un antes y un después. Los ajustes que solo funcionan en los foros se quedan fuera.</p>
+    </div>
+  </div>
+</section>
+
+<section id="proceso" class="wrap">
+  <div class="rv">
+    <div class="eyebrow">02 — Proceso</div>
+    <h2 class="sec-h">Cómo trabajo</h2>
+  </div>
+  <div class="steps rv">
+    <div class="step">
+      <div class="step-n">01</div>
+      <div>
+        <h3>Línea base</h3>
+        <p>Antes de tocar nada, se mide el sistema tal y como está. Sin ese punto de partida, cualquier mejora posterior es una opinión.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">02</div>
+      <div>
+        <h3>Un cambio cada vez</h3>
+        <p>Los ajustes se aplican sueltos, nunca en bloque. Si cambias quince cosas a la vez y mejora, no sabes cuál de las quince lo hizo.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">03</div>
+      <div>
+        <h3>Volver a medir</h3>
+        <p>Misma prueba, mismas condiciones, varias pasadas. Lo que queda dentro del margen de error se descarta, por muy popular que sea.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">04</div>
+      <div>
+        <h3>Documentar y poder deshacer</h3>
+        <p>Qué se cambió, por qué, y cómo se revierte. Un ajuste que no se puede deshacer no es un ajuste, es un riesgo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="rayo" class="wrap">
+  <div class="rv">
+    <div class="eyebrow">03 — Proyecto</div>
+    <div class="proj">
+      <div>
+        <h2>Rayo</h2>
+        <p>Un sistema de scripts para dejar Windows en un estado predecible: sin servicios de relleno, sin telemetría de fondo y sin sorpresas a mitad de partida.</p>
+        <p>Cada bloque se puede aplicar suelto, y cada bloque se puede deshacer.</p>
+      </div>
+      <div class="specs">
+        <div class="spec"><b>Plataforma</b><span>Windows 10 / 11</span></div>
+        <div class="spec"><b>Lenguaje</b><span>Batch + PowerShell</span></div>
+        <div class="spec"><b>Alcance</b><span>Registro · Servicios · Energía</span></div>
+        <div class="spec"><b>Reversible</b><span>Sí, por bloque</span></div>
+        <div class="spec"><b>Verificador</b><span>Incluido</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- EDITAR: cambia fechas, títulos y resúmenes. Borra las que no uses. -->
+<section id="notas" class="wrap">
+  <div class="rv">
+    <div class="eyebrow">04 — Notas</div>
+    <h2 class="sec-h">Apuntes sueltos</h2>
+  </div>
+  <div class="notes rv">
+    <a class="note" href="#">
+      <div class="note-d">2026 · 07</div>
+      <div>
+        <div class="note-t">Por qué casi ningún "tweak" de foro sobrevive a una medición</div>
+        <div class="note-s">Cogí una lista popular de ajustes y los pasé uno a uno por la misma prueba.</div>
+      </div>
+    </a>
+    <a class="note" href="#">
+      <div class="note-d">2026 · 06</div>
+      <div>
+        <div class="note-t">DPI y sensibilidad: por qué unificarlo entre juegos compensa</div>
+        <div class="note-s">La memoria muscular no distingue de títulos. Los números sí.</div>
+      </div>
+    </a>
+    <a class="note" href="#">
+      <div class="note-d">2026 · 05</div>
+      <div>
+        <div class="note-t">Frametime frente a FPS medios</div>
+        <div class="note-s">El número grande de la esquina esconde justo lo que se nota al jugar.</div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- EDITAR: pon aquí tu correo real y tus enlaces. Borra los que no uses. -->
+<section id="contacto" class="wrap">
+  <div class="rv">
+    <div class="eyebrow">05 — Contacto</div>
+    <h2 class="sec-h">Hablamos</h2>
+    <p style="margin-top:18px;color:var(--gris);max-width:44ch">Dudas de configuración, colaboraciones o simplemente contrastar una medición.</p>
+    <div class="contact-links">
+      <a href="mailto:TU-CORREO@ejemplo.com">TU-CORREO@ejemplo.com</a>
+      <a href="https://github.com/TU-USUARIO" rel="me noopener">GitHub</a>
+      <a href="#">Discord</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <span>© 2026 Durik</span>
+    <span>Hecho a mano. Sin plantillas.</span>
+  </div>
+</footer>
+
+<script>
+var REDUCE = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* reveal */
+(function(){
+  var els=document.querySelectorAll('.rv');
+  if(REDUCE || !('IntersectionObserver' in window)){
+    els.forEach(function(e){e.classList.add('in');}); return;
+  }
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(en){
+      if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); }
+    });
+  },{threshold:.12,rootMargin:'0px 0px -40px 0px'});
+  els.forEach(function(e){io.observe(e);});
+})();
+
+/* rayos de fondo */
+(function(){
+  if(REDUCE) return;
+  var svg=document.getElementById('strikes'), NS='http://www.w3.org/2000/svg';
+  function makeBolt(){
+    if(document.hidden) return;
+    var w=window.innerWidth,h=window.innerHeight;
+    var x=w*(0.15+Math.random()*0.7), y=-20, pts=[], steps=13;
+    for(var i=0;i<=steps;i++){
+      pts.push(Math.round(x)+','+Math.round(y));
+      x+=(Math.random()-0.45)*72;
+      y+=h/steps*(0.7+Math.random()*0.6);
+    }
+    var pl=document.createElementNS(NS,'polyline');
+    pl.setAttribute('points',pts.join(' '));
+    svg.appendChild(pl);
+    pl.animate([{opacity:0},{opacity:.85},{opacity:.12},{opacity:.6},{opacity:0}],
+      {duration:420,easing:'ease-out'}).onfinish=function(){pl.remove();};
+  }
+  (function schedule(){
+    setTimeout(function(){makeBolt();schedule();},5200+Math.random()*7000);
+  })();
+})();
+
+/* osciloscopio de frametime */
+(function(){
+  var cv=document.getElementById('scope'), cx=cv.getContext('2d');
+  var N=190, buf=[], chaos=1, target=1;
+  var CG=[128,149,176], CC=[42,232,255];
+
+  function sample(c){
+    var base=8.3+(Math.random()-.5)*(0.35+c*2.2);
+    if(Math.random()<c*0.06) base+=6+Math.random()*18*c;
+    return base;
+  }
+  for(var i=0;i<N;i++) buf.push(sample(1));
+
+  function fit(){
+    var r=cv.getBoundingClientRect(), d=window.devicePixelRatio||1;
+    cv.width=r.width*d; cv.height=r.height*d;
+    cx.setTransform(d,0,0,d,0,0);
+    return r;
+  }
+  var box=fit();
+  window.addEventListener('resize',function(){box=fit();draw();});
+
+  function mix(a,b,t,al){
+    var c=a.map(function(v,i){return Math.round(v+(b[i]-v)*t);});
+    return 'rgba('+c.join(',')+','+(al===undefined?1:al)+')';
+  }
+
+  function draw(){
+    var w=box.width,h=box.height,pad=14,top=8,bot=h-pad,hi=34;
+    cx.clearRect(0,0,w,h);
+
+    cx.strokeStyle='#152741'; cx.lineWidth=1;
+    [8.3,16.7,25].forEach(function(ms){
+      var y=bot-(ms/hi)*(bot-top);
+      cx.beginPath(); cx.moveTo(0,y+.5); cx.lineTo(w,y+.5); cx.stroke();
+      cx.fillStyle='#8095B0'; cx.font='10px IBM Plex Mono, monospace';
+      cx.fillText(ms+' ms',8,y-5);
+    });
+
+    var t=1-chaos, col=mix(CG,CC,t);
+    cx.save();
+    cx.shadowColor=mix(CG,CC,t,.9);
+    cx.shadowBlur=6+t*16;
+    cx.strokeStyle=col; cx.lineWidth=1.7;
+    cx.lineJoin='round'; cx.lineCap='round';
+    cx.beginPath();
+    for(var i=0;i<buf.length;i++){
+      var x=(i/(buf.length-1))*w;
+      var y=bot-(Math.min(buf[i],hi)/hi)*(bot-top);
+      i?cx.lineTo(x,y):cx.moveTo(x,y);
+    }
+    cx.stroke();
+    cx.restore();
+
+    var g=cx.createLinearGradient(0,top,0,bot);
+    g.addColorStop(0,mix(CG,CC,t,.20));
+    g.addColorStop(1,mix(CG,CC,t,0));
+    cx.lineTo(w,bot); cx.lineTo(0,bot); cx.closePath();
+    cx.fillStyle=g; cx.fill();
+  }
+
+  function stats(){
+    var s=buf.slice().sort(function(a,b){return a-b;});
+    var p99=s[Math.floor(s.length*0.99)]||s[s.length-1];
+    document.getElementById('r-low').textContent=Math.round(1000/p99);
+    document.getElementById('r-max').textContent=s[s.length-1].toFixed(1);
+    document.getElementById('r-var').textContent=(s[s.length-1]-s[0]).toFixed(1);
+  }
+
+  var tick=0;
+  function loop(){
+    chaos+=(target-chaos)*0.045;
+    if(++tick%2===0){ buf.push(sample(chaos)); buf.shift(); }
+    draw(); stats();
+    requestAnimationFrame(loop);
+  }
+
+  var raw=document.getElementById('b-raw'), opt=document.getElementById('b-opt');
+  function set(v){
+    target=v;
+    raw.setAttribute('aria-pressed', v===1?'true':'false');
+    opt.setAttribute('aria-pressed', v===0?'true':'false');
+    if(REDUCE){ chaos=v; buf=[]; for(var i=0;i<N;i++) buf.push(sample(v)); draw(); stats(); }
+  }
+  raw.addEventListener('click',function(){set(1);});
+  opt.addEventListener('click',function(){set(0);});
+
+  if(REDUCE){ draw(); stats(); } else { loop(); }
+})();
+</script>
+</body>
+</html>
